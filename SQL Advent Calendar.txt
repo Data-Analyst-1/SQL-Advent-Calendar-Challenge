@@ -1,0 +1,237 @@
+SQL Advent Calendar Challenge Project
+
+day 1: difficulty - medium
+SELECT customer_name, 
+      COUNT(DISTINCT activity) AS activity_count
+FROM rentals
+GROUP BY customer_name
+HAVING COUNT(DISTINCT activity) > 1
+;
+
+day 2: difficulty - easy
+SELECT gift_name
+FROM gifts
+WHERE weight_kg > 1;
+
+day 3: difficulty - hard
+SELECT candy_name,
+       candy_category,
+       calories,
+       RANK() OVER(PARTITION BY candy_category 
+       ORDER BY calories DESC) AS rank
+FROM candy_nutrition;
+
+day 4: difficulty - medium
+SELECT sr.region, 
+       AVG(sf.snowfall_inches) AS average_snowfall
+FROM ski_resorts AS sr 
+INNER JOIN snowfall sf
+ON sr.resort_id = sf.resort_id
+GROUP BY sr.region
+ORDER BY average_snowfall DESC;
+
+day 5: difficulty - easy
+SELECT beach_name
+FROM beach_temperature_predictions
+WHERE expected_temperature_c > 30
+  AND date = '2024-12-25';
+
+day 6: difficulty - hard
+SELECT pb.bear_id,
+      pb.bear_name,
+      SUM(tn.distance_km) AS total_distance_travelled
+FROM polar_bears pb 
+INNER JOIN tracking tn 
+ON pb.bear_id = tn.bear_id
+WHERE tn.date BETWEEN '2024-12-01' AND '2024-12-31'
+GROUP BY pb.bear_id, pb.bear_name
+ORDER BY total_distance_travelled DESC
+LIMIT 3;
+
+day 7:difficulty - medium
+SELECT v.vendor_name,
+       SUM(s.quantity_sold*s.price_per_unit) AS total_revenue
+FROM vendors AS v
+INNER JOIN sales AS s 
+ON v.vendor_id = s.vendor_id
+GROUP BY v.vendor_name
+ORDER BY total_revenue DESC
+LIMIT 2;
+
+day 8: difficulty - easy
+SELECT gift_name, weight_kg
+FROM gifts
+WHERE recipient_type LIKE 'good%';
+
+day 9: difficulty - hard
+WITH calorie_density AS
+(
+    SELECT dish_name,
+       event_name, 
+       calories/weight_g AS calorie_density
+FROM events e 
+INNER JOIN menu m 
+ON e.event_id = m.event_id
+),
+ranked_dishes AS
+(
+SELECT dish_name, event_name, calorie_density,
+    ROW_NUMBER() OVER(PARTITION BY event_name 
+    ORDER BY calorie_density DESC) AS ranking
+FROM calorie_density
+)
+SELECT dish_name, event_name, calorie_density
+FROM ranked_dishes
+WHERE ranking <= 3;
+
+day 10:difficulty - medium
+WITH resolutions_count AS
+(
+SELECT friend_name, 
+       COUNT(*) AS number_of_resolutions,
+       SUM(CASE 
+        WHEN is_completed = 1 THEN 1 ELSE 0 END) 
+         AS resolutions_completed
+FROM resolutions 
+GROUP BY friend_name
+),
+percent_count AS
+(
+SELECT friend_name, 
+       number_of_resolutions,
+       resolutions_completed,
+       (resolutions_completed/number_of_resolutions)*100 
+       AS percent_of_resolutions_completed
+FROM resolutions_count
+)
+SELECT friend_name,
+        number_of_resolutions,
+        resolutions_completed,
+        percent_of_resolutions_completed,
+        CASE WHEN percent_of_resolutions_completed > 75 THEN 'Green'
+             WHEN percent_of_resolutions_completed BETWEEN 50 AND 74 THEN 'Yellow'
+             ELSE 'Red' END 
+             AS success_category
+FROM percent_count;
+
+day 11: difficulty - easy
+SELECT name, birthday
+FROM family_members
+WHERE birthday BETWEEN '2024-12-01' AND '2024-12-31';
+
+day 12: difficulty - hard
+SELECT globe_name,
+       number_of_figurines,
+       material
+FROM
+(SELECT sg.globe_name,
+COUNT(fg.figurine_id) AS number_of_figurines,
+sg.material,
+RANK() OVER(ORDER BY COUNT(fg.figurine_id) DESC) AS ranking
+FROM snow_globes AS sg 
+LEFT JOIN figurines AS fg 
+ON sg.globe_id = fg.globe_id
+GROUP BY sg.globe_name) AS ranked_globes
+WHERE ranking <= 3;
+
+day 13: difficulty - medium 
+SELECT recipient, SUM(weight_kg) AS total_weight
+FROM gifts
+GROUP BY recipient;
+
+day 14: difficulty - easy
+SELECT resort_name
+FROM snowfall
+WHERE snowfall_inches > 50;
+
+day 15: difficulty - hard
+WITH children_count AS(
+SELECT fm.name AS parent_name, 
+COUNT(pcr.child_id) AS total_children
+FROM family_members fm
+LEFT JOIN parent_child_relationships pcr 
+ON fm.member_id = pcr.parent_id 
+WHERE fm.age > 18
+GROUP BY fm.name)
+SELECT parent_name, total_children
+FROM children_count
+ORDER BY total_children DESC
+LIMIT 3;
+
+day 16: difficulty - medium 
+SELECT category, 
+       SUM(quantity_sold*price_per_unit) AS total_revenue
+FROM candy_sales
+GROUP BY category;
+
+day 17: difficulty - easy
+SELECT prank_name, location
+FROM grinch_pranks
+WHERE difficulty IN('Advanced', 'Expert')
+ORDER BY location DESC, prank_name DESC;
+
+day 18: difficulty - hard
+SELECT activity_name
+FROM(
+    SELECT ac.activity_id, ac.activity_name, 
+      AVG(ar.rating) AS avg_rating
+FROM activities ac 
+LEFT JOIN  activity_ratings ar 
+ON ac.activity_id = ar.activity_id
+GROUP BY ac.activity_id, ac.activity_name) AS ranking
+ORDER BY avg_rating DESC
+LIMIT 2;
+
+day 19: difficulty - medium
+SELECT pb.bear_name, 
+      MAX(ml.food_weight_kg) AS biggest_meal_kg
+FROM polar_bears AS pb 
+INNER JOIN meal_log AS ml 
+ON pb.bear_id = ml.bear_id
+WHERE date BETWEEN '2024-12-01' AND '2024-12-31'
+GROUP BY pb.bear_name
+ORDER BY biggest_meal_kg DESC;
+
+day 20: difficulty - easy
+SELECT DISTINCT v.vendor_name
+FROM vendors v 
+INNER JOIN item_prices p 
+ON v.vendor_id = p.vendor_id
+WHERE p.price_usd < 10;
+
+day 21: difficulty - hard
+WITH overall_weightx AS
+(
+SELECT SUM(weight_kg) AS overall_weight
+FROM gifts
+)
+SELECT recipient_type, 
+       SUM(weight_kg) AS total_weight,
+       1.0 * SUM(weight_kg)/overall_weight AS weight_percentage  
+FROM gifts g
+CROSS JOIN overall_weightx w 
+GROUP BY recipient_type;
+
+day 22: medium
+SELECT gs.guest_name
+FROM guests gs 
+WHERE gs.guest_id NOT IN(
+    SELECT gg.guest_id
+    FROM guest_gifts gg 
+);
+
+day 23: medium 
+SELECT day_of_month, 
+weight - LAG(weight) OVER(ORDER BY log_id) AS weight_change
+FROM grinch_weight_log
+ORDER BY log_id;
+
+day 24: hard
+SELECT
+    delivery_date,
+    gifts_delivered,
+    SUM(gifts_delivered) OVER (ORDER BY delivery_date) AS cumulative_gifts_delivered
+FROM
+    deliveries
+ORDER BY
+    delivery_date;
